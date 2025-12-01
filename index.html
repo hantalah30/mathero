@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Hero - Pilih Petualanganmu!</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <span class="floating-animal animal-1">🦊</span>
+    <span class="floating-animal animal-2">🦁</span>
+    <span class="floating-animal animal-3">🦄</span>
+
+    <header class="hero-header">
+        <img src="math_hero_icon.png" alt="Math Hero Icon" class="header-icon">
+        <h1>MATH HERO</h1>
+        <p>Pilih Misi Numerasimu Hari Ini!</p>
+    </header>
+
+    <main class="game-selection-container">
+        <h2 id="no-game-message" style="display:none;">⚠️ Belum ada Game yang tersedia. Mohon Guru untuk membuat game baru!</h2>
+        <div id="game-list" class="game-list">
+            </div>
+    </main>
+
+    <div id="game-area" class="game-area-overlay" style="display:none;">
+        <button class="back-button" onclick="goBackToSelection()">⬅️ Kembali</button>
+        <div id="game-content">
+            </div>
+    </div>
+
+    <div id="winner-popup" class="winner-popup-overlay" style="display: none;">
+        <div class="winner-popup-content">
+            <div class="fireworks"></div> 
+            <h1 id="winner-title"></h1>
+            <div class="trophy-icon">🏆</div>
+            <p id="winner-message"></p>
+            <button onclick="closeWinnerPopUp()">Kembali ke Menu</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
