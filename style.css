@@ -92,7 +92,7 @@ body {
     border-radius: 25px; 
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4); 
     width: 300px; 
-    padding: 30px;
+    padding: 5px;
     transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
     border-bottom: 10px solid; 
     cursor: pointer; 
@@ -729,4 +729,182 @@ body {
     .memory-card { height: 80px; }
     
     .team-score-card { font-size: 1em; }
+}
+
+
+/* ======================= GAYA DASHBOARD GURU (BARU) ======================= */
+
+.admin-body {
+    background-color: #e8eaf6; /* Lavender muda */
+    text-align: left;
+}
+
+.admin-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-header h2 {
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.logout-button {
+    background-color: var(--color-danger);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.logout-button:hover {
+    background-color: #c62828;
+}
+
+.nav-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ccc;
+}
+
+.nav-tabs button {
+    background: none;
+    border: none;
+    padding: 15px 25px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.2s, border-bottom 0.2s;
+}
+
+.nav-tabs button.active {
+    border-bottom: 3px solid var(--color-secondary);
+    font-weight: bold;
+    color: var(--color-secondary);
+    background-color: var(--color-light-bg);
+}
+
+.tab-content h3 {
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 10px;
+    margin-top: 30px;
+    color: var(--color-primary);
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.action-button {
+    background-color: var(--color-success);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.2s;
+}
+.action-button.delete {
+    background-color: var(--color-danger);
+}
+.action-button:hover {
+    filter: brightness(1.1);
+}
+
+/* Table Styles */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.data-table th, .data-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.data-table th {
+    background-color: #f2f2f2;
+    color: var(--color-text);
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Login Page Style */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: var(--color-light-bg);
+}
+
+.login-box {
+    background-color: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    width: 350px;
+    text-align: center;
+}
+
+.login-box input {
+    margin-bottom: 15px;
+}
+
+.login-box button {
+    width: 100%;
+    background-color: var(--color-primary);
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.login-box p#login-error {
+    color: var(--color-danger);
+    font-weight: bold;
+}
+
+/* Game Settings Specific Styles */
+.game-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
 }

@@ -6,12 +6,20 @@
     <title>Math Hero - Pilih Petualanganmu!</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
+
+    <div id="loading-screen">
+        <div class="loading-spinner">✨</div>
+        <p class="loading-text">Sedang Memuat Misi Lucu...</p>
+    </div>
 
     <span class="floating-animal animal-1">🦊</span>
     <span class="floating-animal animal-2">🦁</span>
     <span class="floating-animal animal-3">🦄</span>
+    <span class="floating-animal animal-4">🐒</span>
 
     <header class="hero-header">
         <img src="math_hero_icon.png" alt="Math Hero Icon" class="header-icon">
@@ -20,26 +28,29 @@
     </header>
 
     <main class="game-selection-container">
-        <h2 id="no-game-message" style="display:none;">⚠️ Belum ada Game yang tersedia. Mohon Guru untuk membuat game baru!</h2>
+        <h2 id="no-game-message" style="display:none; color:var(--color-danger);">⚠️ Belum ada Game yang tersedia. Mohon Guru untuk membuat game baru!</h2>
         <div id="game-list" class="game-list">
             </div>
     </main>
 
     <div id="game-area" class="game-area-overlay" style="display:none;">
-        <button class="back-button" onclick="goBackToSelection()">⬅️ Kembali</button>
+        <button class="back-button" onclick="goBackToSelection()">⬅️ Kembali Ngakak</button>
         <div id="game-content">
             </div>
     </div>
 
     <div id="winner-popup" class="winner-popup-overlay" style="display: none;">
         <div class="winner-popup-content">
-            <div class="fireworks"></div> 
             <h1 id="winner-title"></h1>
             <div class="trophy-icon">🏆</div>
             <p id="winner-message"></p>
-            <button onclick="closeWinnerPopUp()">Kembali ke Menu</button>
+            <button onclick="closeWinnerPopUp()">Kembali ke Menu Awal!</button>
         </div>
     </div>
+
+    <footer style="margin-top: 50px; padding: 20px; font-size: 0.9em; color: #aaa;">
+        <a href="teacher.html" style="color: var(--color-text); text-decoration: none;">Akses Guru</a>
+    </footer>
 
     <script src="script.js"></script>
 </body>

@@ -2,16 +2,27 @@
 // MATH HERO - SCRIPT JAVASCRIPT UTAMA (VERSI MURID)
 // ====================================================================
 
-// --- DATABASE SIMULASI: Data Tim Balap/Memory/Mystery/Wheel ---
-const teamRacers = [
-    { name: "Kucing", char: "🐱", id: 1 },
-    { name: "Kelinci", char: "🐰", id: 2 },
-    { name: "Anjing", char: "🐶", id: 3 },
-    { name: "Panda", char: "🐼", id: 4 },
-    { name: "Monyet", char: "🐒", id: 5 }
-];
+// --- 1. INISIALISASI FIREBASE ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDeMLdq75cMKNsSYRKfQkodx_L-3lhJCWU",
+    authDomain: "mathhero2-e5036.firebaseapp.com",
+    projectId: "mathhero2-e5036",
+    storageBucket: "mathhero2-e5036.firebasestorage.app",
+    messagingSenderId: "616944810236",
+    appId: "1:616944810236:web:e341aa30472c37fb553f79"
+};
 
-// --- FUNGSI GENERATOR SOAL UNIK ---
+// Menginisialisasi Firebase App jika belum terinisialisasi
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+// --- STATE GLOBAL DATA YANG DI AMBIL DARI FIREBASE ---
+let teamRacers = []; // Akan dimuat dari Firebase
+let activeGames = []; // Akan dimuat dari Firebase
+
+// --- FUNGSI GENERATOR SOAL (DIGUNAKAN UNTUK SIMULASI) ---
 function generateUniqueQuestions(count, maxResult, maxOperands, excludeAnswers = []) {
     let generatedQuestions = [];
     let uniqueAnswers = new Set(excludeAnswers);
@@ -55,89 +66,100 @@ function generateUniqueQuestions(count, maxResult, maxOperands, excludeAnswers =
 }
 
 
-// --- DATABASE SIMULASI: Data Game (TEMPLATE) ---
-const activeGames = [
-    { 
-        id: 1, 
-        title: "Math Race: Balapan Rebutan", 
-        description: "Siapa cepat, dia yang maju!", 
-        icon: "🏆", 
-        theme: "race-theme",
-        type: "MathRace",
-        questions: [] 
-    },
-    { 
-        id: 2, 
-        title: "Mystery Box: Rebutan Kotak", 
-        description: "Pilih kotak dan rebut poin!", 
-        icon: "🎁", 
-        theme: "mystery-theme",
-        type: "MysteryBox",
-        questions: [] 
-    },
-    { 
-        id: 3, 
-        title: "Memory Card: Cari Pasangan", 
-        description: "Uji daya ingatmu dengan angka!", 
-        icon: "🧠", 
-        theme: "memory-theme",
-        type: "MemoryCard",
-        cardPairs: [] 
-    },
-    { 
-        id: 4, 
-        title: "Wheel of Math: Roda Rebutan", 
-        description: "Putar roda dan rebut soalnya!", 
-        icon: "🎡", 
-        theme: "wheel-theme",
-        type: "WheelOfMath",
-        wheelSegments: [
-            { label: "Mudah", value: 1, color: "var(--color-success)", difficulty: 'EASY' },
-            { label: "Sulit (x3)", value: 3, color: "var(--color-danger)", difficulty: 'HARD' },
-            { label: "BONUS!", value: 0, color: "var(--color-accent)", difficulty: 'BONUS' },
-            { label: "Sedang (x2)", value: 2, color: "var(--color-primary)", difficulty: 'MEDIUM' },
-            { label: "Sulit (x3)", value: 3, color: "var(--color-danger)", difficulty: 'HARD' },
-            { label: "Sedang (x2)", value: 2, color: "var(--color-primary)", difficulty: 'MEDIUM' },
-            { label: "Mudah", value: 1, color: "var(--color-success)", difficulty: 'EASY' },
-            { label: "BONUS!", value: 0, color: "var(--color-accent)", difficulty: 'BONUS' }
-        ]
-    }
-];
-
-
 // --- STATE GLOBAL GAME ---
 let currentGameData = null; 
 let currentQuestionIndex = 0; 
 let activeTeamIndex = 0; 
-const teamScores = teamRacers.reduce((acc, team) => ({ ...acc, [team.id]: 0 }), {});
-
+let teamScores = {}; 
 
 // --- STATE MATH RACE ---
-let racerPositions = teamRacers.reduce((acc, team) => { acc[team.id] = 0; return acc; }, {});
-const trackLength = 100; 
-const stepSize = 10; 
+let racerPositions = {};
 let availableQuestions = []; 
 let isQuestionActive = false; 
-
+const trackLength = 100; // Final finish line percentage
 
 // --- STATE MYSTERY BOX ---
-const BOX_COUNT = 12; 
+let BOX_COUNT = 12; 
 let mysteryBoxQuestions = [];
 let mysteryBoxSolvedCount = 0;
 let isBoxOpen = false; 
-
+let activeBoxId = null;
 
 // --- STATE MEMORY CARD ---
 let shuffledCards = [];
 let cardsFlipped = [];
 let lockBoard = false;
 let matchedPairsCount = 0;
-const MEMORY_PAIR_COUNT = 6;
-
+let MEMORY_PAIR_COUNT = 6;
 
 // --- STATE WHEEL OF MATH ---
 let wheelIsSpinning = false;
 let wheelQuestion = null; 
+let wheelTargetScore = 20;
+const defaultWheelSegments = [
+    { label: "Mudah", value: 1, color: "var(--color-success)", difficulty: 'EASY' },
+    { label: "Sulit (x3)", value: 3, color: "var(--color-danger)", difficulty: 'HARD' },
+    { label: "BONUS!", value: 0, color: "var(--color-accent)", difficulty: 'BONUS' },
+    { label: "Sedang (x2)", value: 2, color: "var(--color-primary)", difficulty: 'MEDIUM' },
+    { label: "Sulit (x3)", value: 3, color: "var(--color-danger)", difficulty: 'HARD' },
+    { label: "Sedang (x2)", value: 2, color: "var(--color-primary)", difficulty: 'MEDIUM' },
+    { label: "Mudah", value: 1, color: "var(--color-success)", difficulty: 'EASY' },
+    { label: "BONUS!", value: 0, color: "var(--color-accent)", difficulty: 'BONUS' }
+];
+
+
+// ====================================================================
+// FUNGSI LOAD DATA DARI FIREBASE
+// ====================================================================
+
+function hideLoadingScreen() {
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 500); 
+    }
+}
+
+async function loadInitialData() {
+    try {
+        document.getElementById('game-list').innerHTML = '<p style="text-align:center;">Memuat data tim dan game...</p>';
+        
+        // 1. Load Teams
+        const teamSnapshot = await db.collection('teams').get();
+        teamRacers = teamSnapshot.docs.map(doc => ({ 
+            ...doc.data(), 
+            id: doc.data().id || doc.id
+        }));
+        
+        // 2. Load Active Games
+        const gameSnapshot = await db.collection('activeGames').where('isActive', '==', true).get();
+        activeGames = gameSnapshot.docs.map(doc => ({ 
+            ...doc.data(), 
+            id: doc.id,
+            description: doc.data().description || 'Petualangan Numerasi'
+        }));
+        
+        // 3. Render
+        if (teamRacers.length > 0) {
+             teamScores = teamRacers.reduce((acc, team) => ({ ...acc, [team.id]: 0 }), {});
+        } else {
+            document.getElementById('no-game-message').textContent = '⚠️ Belum ada Tim yang terdaftar di Dashboard Guru!';
+        }
+        
+        renderGameCards();
+        hideLoadingScreen(); // Sembunyikan loading setelah data dimuat
+        
+    } catch (error) {
+        console.error("Gagal memuat data dari Firebase:", error);
+        document.getElementById('game-list').innerHTML = '';
+        document.getElementById('no-game-message').style.display = 'block';
+        document.getElementById('no-game-message').textContent = '⚠️ Gagal memuat game dari server. Cek koneksi atau konfigurasi guru!';
+        hideLoadingScreen();
+    }
+}
+
 
 // ====================================================================
 // FUNGSI UTAMA NAVIGASI APLIKASI
@@ -145,35 +167,41 @@ let wheelQuestion = null;
 
 function renderGameCards() {
     const gameListContainer = document.getElementById('game-list');
-    
     gameListContainer.innerHTML = ''; 
 
     if (activeGames.length === 0) {
         document.getElementById('no-game-message').style.display = 'block';
+        document.getElementById('no-game-message').textContent = '⚠️ Belum ada Game yang tersedia. Mohon Guru untuk membuat game baru!';
         return;
     }
+    
+    document.getElementById('no-game-message').style.display = 'none';
 
     activeGames.forEach(game => {
-        if (game.type === "MathRace" || game.type === "MysteryBox" || game.type === "MemoryCard" || game.type === "WheelOfMath") {
-            const cardHTML = `
-                <div class="game-card ${game.theme}" data-game-id="${game.id}" onclick="startGame(${game.id})">
-                    <div class="card-icon">${game.icon}</div>
-                    <h3>${game.title}</h3>
-                    <p>${game.description}</p>
-                    <button>Mulai Game</button>
-                </div>
-            `;
-            gameListContainer.innerHTML += cardHTML;
-        }
+        const cardHTML = `
+            <div class="game-card ${game.theme}" data-game-id="${game.id}" onclick="startGame('${game.id}')">
+                <div class="card-icon">${game.icon}</div>
+                <h3>${game.title}</h3>
+                <p>${game.description}</p>
+                <button>Mulai Game</button>
+            </div>
+        `;
+        gameListContainer.innerHTML += cardHTML;
     });
 }
 
 function startGame(gameId) {
+    if (teamRacers.length === 0) {
+        alert("Tim belum diatur! Hubungi guru untuk mengatur tim.");
+        return;
+    }
+    
     document.getElementById('game-list').parentElement.style.display = 'none';
     document.getElementById('game-area').style.display = 'block';
 
     currentGameData = activeGames.find(g => g.id === gameId);
     const gameContentDiv = document.getElementById('game-content');
+    const settings = currentGameData.settings || {};
     
     let gameHTML = `
         <h2 style="color: ${currentGameData.theme === 'race-theme' ? '#4CAF50' : (currentGameData.type === 'MysteryBox' ? '#9C27B0' : (currentGameData.type === 'WheelOfMath' ? '#FF5733' : '#ff5722'))};">${currentGameData.icon} ${currentGameData.title}</h2>
@@ -182,11 +210,13 @@ function startGame(gameId) {
     `;
     
     activeTeamIndex = 0; 
-    Object.keys(teamScores).forEach(key => teamScores[key] = 0); 
+    teamScores = teamRacers.reduce((acc, team) => ({ ...acc, [team.id]: 0 }), {}); 
     
     if (currentGameData.type === "MathRace") {
         racerPositions = teamRacers.reduce((acc, team) => { acc[team.id] = 0; return acc; }, {});
-        availableQuestions = generateUniqueQuestions(10, 30, 15); 
+        
+        const questionCount = settings.questionCount || 10;
+        availableQuestions = generateUniqueQuestions(questionCount, 30, 15); 
         
         gameHTML += renderMathRaceTrack();
         gameHTML += renderMathRaceQuestionBox(); 
@@ -196,6 +226,8 @@ function startGame(gameId) {
         displayNextMathRaceQuestion();
 
     } else if (currentGameData.type === "MysteryBox") {
+        BOX_COUNT = settings.boxCount || 12; 
+        
         const generatedQuestions = generateUniqueQuestions(BOX_COUNT, 40, 20);
         
         mysteryBoxQuestions = generatedQuestions.map((q, index) => ({
@@ -216,15 +248,21 @@ function startGame(gameId) {
         document.getElementById('mystery-turn-indicator').textContent = "Pilih Kotak untuk Mulai!";
         
     } else if (currentGameData.type === "MemoryCard") {
+        MEMORY_PAIR_COUNT = settings.pairCount || 6; 
+        
         gameHTML += renderMemoryCardGame();
         gameContentDiv.innerHTML = gameHTML;
         initializeMemoryCardGame();
         
     } else if (currentGameData.type === "WheelOfMath") {
+        wheelTargetScore = settings.targetScore || 20; 
+        currentGameData.wheelSegments = defaultWheelSegments; 
+        
         gameHTML += renderWheelOfMathGame();
         gameContentDiv.innerHTML = gameHTML;
         updateWheelScoreboard();
         
+        document.getElementById('wheel-turn-indicator').textContent = `Target Skor: ${wheelTargetScore}`;
         document.getElementById('wheel-character-feedback').innerHTML = '👇'; 
         document.getElementById('wheel-question-box').style.display = 'none';
     }
@@ -239,8 +277,9 @@ function goBackToSelection() {
     currentGameData = null;
     currentQuestionIndex = 0;
     activeTeamIndex = 0;
-    Object.keys(teamScores).forEach(key => teamScores[key] = 0); 
-    wheelIsSpinning = false; // Reset wheel state
+    
+    // Reload data for fresh game list
+    loadInitialData();
 }
 
 // ====================================================================
@@ -257,7 +296,7 @@ function renderMathRaceTrack() {
         trackHTML += `
             <div class="lane" id="lane-${team.id}">
                 <div class="racer-label">Tim ${team.name}</div>
-                <div class="racer" id="racer-${team.id}" style="transform: translateX(${racerPositions[team.id]}%);">${team.char}</div>
+                <div class="racer" id="racer-${team.id}" style="transform: translateX(0%);">${team.char}</div>
                 <div class="finish-line"></div>
             </div>
         `;
@@ -284,8 +323,8 @@ function renderMathRaceQuestionBox() {
         boxHTML += `
             <div class="answer-col" id="col-${team.id}">
                 <h4>Tim ${team.name}</h4>
-                <input type="number" id="answer-input-${team.id}" placeholder="Jawab!" onkeydown="if(event.key === 'Enter') checkTeamAnswer(${team.id});">
-                <button class="team-submit" onclick="checkTeamAnswer(${team.id})">Kirim!</button>
+                <input type="number" id="answer-input-${team.id}" placeholder="Jawab!" onkeydown="if(event.key === 'Enter') checkTeamAnswer('${team.id}');">
+                <button class="team-submit" onclick="checkTeamAnswer('${team.id}')">Kirim!</button>
             </div>
         `;
     });
@@ -314,15 +353,23 @@ function displayNextMathRaceQuestion() {
         inputElement.disabled = false;
         buttonElement.disabled = false;
         colElement.style.backgroundColor = '#ffe0b2'; 
+        colElement.classList.remove('correct', 'wrong'); // Reset classes
     });
 
-    document.getElementById(`answer-input-${teamRacers[0].id}`).focus();
+    if (teamRacers.length > 0) {
+        document.getElementById(`answer-input-${teamRacers[0].id}`).focus();
+    }
     isQuestionActive = true; 
 }
 
 function checkTeamAnswer(teamId) {
     if (!isQuestionActive) return; 
-
+    
+    const settings = currentGameData.settings || {};
+    const questionCount = settings.questionCount || 10;
+    const raceSteps = settings.stepsToWin || 100;
+    const stepSize = raceSteps / questionCount; 
+    
     const inputElement = document.getElementById(`answer-input-${teamId}`);
     const answerColElement = document.getElementById(`col-${teamId}`);
     const team = teamRacers.find(t => t.id === teamId);
@@ -331,18 +378,18 @@ function checkTeamAnswer(teamId) {
     const [_, correctAnswer] = availableQuestions[currentQuestionIndex]; 
 
     if (isNaN(userAnswer)) {
-        answerColElement.style.animation = 'shake 0.3s';
-        setTimeout(() => answerColElement.style.animation = 'none', 300);
+        answerColElement.classList.add('wrong');
+        setTimeout(() => answerColElement.classList.remove('wrong'), 300);
         return;
     }
 
     if (userAnswer === correctAnswer) {
         isQuestionActive = false; 
         
-        answerColElement.style.backgroundColor = '#b9f6ca'; 
+        answerColElement.classList.add('correct'); 
         alert(`🥇 Tim ${team.name} TERCEPAT! Jawaban benar. ${team.name} Maju!`);
         
-        const isWinner = moveRacer(teamId);
+        const isWinner = moveRacer(teamId, stepSize);
         
         if (!isWinner) {
             currentQuestionIndex++; 
@@ -352,12 +399,8 @@ function checkTeamAnswer(teamId) {
         }
 
     } else {
-        answerColElement.style.backgroundColor = '#ffcdd2'; 
-        answerColElement.style.animation = 'shake 0.3s';
-        setTimeout(() => {
-            answerColElement.style.backgroundColor = '#ffe0b2'; 
-            answerColElement.style.animation = 'none';
-        }, 500); 
+        answerColElement.classList.add('wrong'); 
+        setTimeout(() => answerColElement.classList.remove('wrong'), 500); 
 
         alert(`❌ Tim ${team.name} SALAH! Coba lagi!`);
         inputElement.value = ''; 
@@ -365,13 +408,13 @@ function checkTeamAnswer(teamId) {
     }
 }
 
-function moveRacer(teamId) {
+function moveRacer(teamId, stepSize) {
     const team = teamRacers.find(t => t.id === teamId);
     
     racerPositions[teamId] += stepSize;
     let newPosition = racerPositions[teamId];
 
-    if (newPosition > 100) newPosition = 100;
+    if (newPosition > trackLength) newPosition = trackLength;
     
     document.getElementById(`racer-${teamId}`).style.transform = `translateX(${newPosition}%)`;
     
@@ -397,7 +440,7 @@ function renderMysteryBoxGame() {
             </div>
             
             <div class="mystery-box-grid-wrapper">
-                <div class="box-grid box-grid-12" id="mystery-box-grid">
+                <div class="box-grid box-grid-12" id="mystery-box-grid" style="grid-template-columns: repeat(${Math.min(BOX_COUNT, 12) > 4 ? 4 : 3}, 1fr);">
                     ${mysteryBoxQuestions.map((q, index) => `
                         <button class="mystery-box-button ${q.color}" 
                                 data-box-id="${q.id}"
@@ -417,8 +460,8 @@ function renderMysteryBoxGame() {
                     ${teamRacers.map(t => `
                         <div class="answer-col" id="mystery-col-${t.id}">
                             <h4>Tim ${t.name}</h4>
-                            <input type="number" id="mystery-answer-input-${t.id}" placeholder="Jawab!" onkeydown="if(event.key === 'Enter') checkMysteryBoxAnswer(${t.id});" disabled>
-                            <button class="team-submit" onclick="checkMysteryBoxAnswer(${t.id})" disabled>Kirim!</button>
+                            <input type="number" id="mystery-answer-input-${t.id}" placeholder="Jawab!" onkeydown="if(event.key === 'Enter') checkMysteryBoxAnswer('${t.id}');" disabled>
+                            <button class="team-submit" onclick="checkMysteryBoxAnswer('${t.id}')" disabled>Kirim!</button>
                         </div>
                     `).join('')}
                 </div>
@@ -448,20 +491,24 @@ function openMysteryBox(boxId) {
     document.getElementById('mystery-character-feedback').innerHTML = '🧐'; 
     
     teamRacers.forEach(team => {
+        const colElement = document.getElementById(`mystery-col-${team.id}`);
         document.getElementById(`mystery-answer-input-${team.id}`).value = '';
         document.getElementById(`mystery-answer-input-${team.id}`).disabled = false;
         document.querySelector(`#mystery-col-${team.id} button`).disabled = false;
-        document.getElementById(`mystery-col-${team.id}`).style.backgroundColor = '#ffe0b2'; 
+        colElement.style.backgroundColor = '#ffe0b2'; 
+        colElement.classList.remove('correct', 'wrong'); // Reset classes
     });
     
     document.querySelectorAll('.mystery-box-button').forEach(btn => btn.disabled = true);
     
     activeBoxId = boxId;
-    document.getElementById(`mystery-answer-input-${teamRacers[0].id}`).focus();
+    if (teamRacers.length > 0) {
+        document.getElementById(`mystery-answer-input-${teamRacers[0].id}`).focus();
+    }
 }
 
 function checkMysteryBoxAnswer(teamId) {
-    if (!isBoxOpen) return;
+    if (!isBoxOpen || !activeBoxId) return;
     
     const inputElement = document.getElementById(`mystery-answer-input-${teamId}`);
     const answerColElement = document.getElementById(`mystery-col-${teamId}`);
@@ -472,8 +519,8 @@ function checkMysteryBoxAnswer(teamId) {
     const correctAnswer = questionData.answer;
     
     if (isNaN(userAnswer)) {
-        answerColElement.style.animation = 'shake 0.3s';
-        setTimeout(() => answerColElement.style.animation = 'none', 300);
+        answerColElement.classList.add('wrong');
+        setTimeout(() => answerColElement.classList.remove('wrong'), 300);
         return;
     }
     
@@ -488,12 +535,12 @@ function checkMysteryBoxAnswer(teamId) {
         isBoxOpen = false; 
         
         document.getElementById('mystery-character-feedback').innerHTML = '🥳'; 
-        answerColElement.style.backgroundColor = '#b9f6ca'; 
+        answerColElement.classList.add('correct'); 
         alert(`🎉 TIM ${team.name} TERCEPAT! Berhak mengambil kotak!`);
         
         const boxElement = document.querySelector(`[data-box-id="${activeBoxId}"]`);
         boxElement.classList.add('opened');
-        boxElement.innerHTML = team.char; // Tampilkan karakter pemecah
+        boxElement.innerHTML = team.char; 
         mysteryBoxQuestions.find(q => q.id === activeBoxId).opened = true;
         mysteryBoxSolvedCount++;
         
@@ -508,7 +555,7 @@ function checkMysteryBoxAnswer(teamId) {
         
     } else {
         // JAWABAN SALAH: BUKA KEMBALI KESEMPATAN UNTUK SEMUA TIM
-        answerColElement.style.backgroundColor = '#ffcdd2'; 
+        answerColElement.classList.add('wrong');
         document.getElementById('mystery-character-feedback').innerHTML = '😥'; 
         alert(`❌ TIM ${team.name} SALAH! Rebutan dibuka lagi!`);
         
@@ -532,6 +579,7 @@ function resetMysteryBoxGame() {
     document.getElementById('mystery-question-box').style.display = 'none';
     document.getElementById('mystery-turn-indicator').textContent = "Pilih Kotak!";
     document.getElementById('mystery-character-feedback').innerHTML = '😁'; 
+    activeBoxId = null;
     
     document.querySelectorAll('.mystery-box-button').forEach(btn => {
         btn.classList.remove('pop-up-box'); 
@@ -555,229 +603,11 @@ function showMysteryWinnerPopUp() {
     });
     
     const winnerTeam = teamRacers.find(t => t.id === winnerId);
-    
-    const popup = document.getElementById('winner-popup');
-    const title = document.getElementById('winner-title');
-    const message = document.getElementById('winner-message');
-    
-    document.getElementById('game-area').style.display = 'none';
-
-    title.textContent = `JUARA KOTAK: TIM ${winnerTeam.name}!`;
-    message.textContent = `${winnerTeam.char} Memenangkan ${maxScore} Kotak Misteri!`;
-    
-    popup.style.display = 'flex';
+    showEndGamePopUp(winnerTeam, maxScore);
 }
 
 // ====================================================================
-// LOGIKA GAME 4: WHEEL OF MATH
-// ====================================================================
-
-function renderWheelOfMathGame() {
-    const totalSegments = currentGameData.wheelSegments.length;
-    
-    let segmentsHTML = currentGameData.wheelSegments.map((seg, index) => {
-        const angle = 360 / totalSegments;
-        const skew = 90 - angle;
-        const color = seg.color;
-        const rotate = index * angle;
-        
-        return `
-            <li style="--color: ${color}; transform: rotate(${rotate}deg) skewY(${skew}deg);">
-                <span style="color: ${color}; transform: skewY(-${skew}deg) rotate(${angle / 2}deg);">
-                    ${seg.label}
-                </span>
-            </li>
-        `;
-    }).join('');
-
-    return `
-        <div class="wheel-container">
-             <div class="score-and-turn-indicator">
-                <div id="wheel-turn-indicator" class="turn-indicator">Tekan Putar Roda!</div>
-                <div id="wheel-score-board" class="score-board">
-                    ${teamRacers.map(t => `<div id="wheel-score-${t.id}" class="team-score-card team-${t.id}">${t.char} <span class="score-value">0</span></div>`).join('')}
-                </div>
-            </div>
-            
-            <div class="wheel-wrapper">
-                <div class="wheel-pin"></div>
-                <ul class="wheel" id="wheel">
-                    ${segmentsHTML}
-                </ul>
-                <button class="spin-button" id="spin-button" onclick="spinWheel()">PUTAR RODA!</button>
-            </div>
-            
-            <div class="question-box wheel-question-box" id="wheel-question-box" style="display:none;">
-                <div class="character-feedback-container">
-                    <span id="wheel-character-feedback" class="character-feedback-emoji"></span>
-                    <h3 id="wheel-current-question" style="color:#D50000;"></h3>
-                </div>
-                <div class="group-answer-section wheel-rebutan-answer-section">
-                    ${teamRacers.map(t => `
-                        <div class="answer-col" id="wheel-col-${t.id}">
-                            <h4>Tim ${t.name}</h4>
-                            <input type="number" id="wheel-answer-input-${t.id}" placeholder="Jawab!" onkeydown="if(event.key === 'Enter') checkWheelAnswer(${t.id});" disabled>
-                            <button class="team-submit" onclick="checkWheelAnswer(${t.id})" disabled>Kirim!</button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function updateWheelScoreboard() {
-    teamRacers.forEach(team => {
-        document.querySelector(`#wheel-score-${team.id} .score-value`).textContent = teamScores[team.id];
-    });
-}
-
-function spinWheel() {
-    if (wheelIsSpinning) return;
-    wheelIsSpinning = true;
-    document.getElementById('spin-button').disabled = true;
-    document.getElementById('wheel-question-box').style.display = 'none'; 
-
-    const wheel = document.getElementById('wheel');
-    const totalSegments = currentGameData.wheelSegments.length;
-    const segmentAngle = 360 / totalSegments;
-    
-    const winningSegmentIndex = Math.floor(Math.random() * totalSegments);
-    const winningSegment = currentGameData.wheelSegments[winningSegmentIndex];
-    
-    const extraTurns = 5; 
-    const targetRotation = (extraTurns * 360) + (360 - (winningSegmentIndex * segmentAngle) - (segmentAngle / 2));
-    
-    wheel.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)'; 
-    wheel.style.transform = `rotate(${targetRotation}deg)`;
-    
-    document.getElementById('wheel-turn-indicator').textContent = 'Roda Berputar!';
-    document.getElementById('wheel-character-feedback').innerHTML = '🤞'; 
-
-    setTimeout(() => {
-        wheel.style.transition = 'none'; 
-        wheel.style.transform = `rotate(${targetRotation % 360}deg)`; 
-        handleWheelResult(winningSegment);
-    }, 5000); 
-}
-
-function handleWheelResult(segment) {
-    wheelIsSpinning = false;
-    document.getElementById('spin-button').disabled = false;
-    document.getElementById('wheel-turn-indicator').textContent = segment.label.toUpperCase() + "!";
-    
-    document.getElementById('wheel-character-feedback').innerHTML = '🥳'; 
-    
-    if (segment.difficulty === 'BONUS') {
-        const bonusPoints = segment.value + 1; 
-        alert(`🎉 BONUS POIN! Semua tim mendapat +${bonusPoints} poin!`); 
-        teamRacers.forEach(team => {
-            teamScores[team.id] += bonusPoints;
-        });
-        updateWheelScoreboard();
-        setTimeout(resetWheelQuestion, 2000);
-
-    } else {
-        displayWheelQuestion(segment);
-    }
-}
-
-function displayWheelQuestion(segment) {
-    let maxResult = 20; 
-    if (segment.difficulty === 'HARD') maxResult = 40;
-    
-    const [questionText, answer] = generateUniqueQuestions(1, maxResult, 20)[0]; 
-    wheelQuestion = { question: questionText, answer: answer, points: segment.value };
-    
-    const questionBox = document.getElementById('wheel-question-box');
-    questionBox.style.display = 'block';
-    
-    document.getElementById('wheel-current-question').textContent = `[${segment.label}] Berapakah ${questionText}? (Nilai: ${wheelQuestion.points} pts)`;
-    document.getElementById('wheel-turn-indicator').textContent = 'REBUT JAWABANNYA!';
-    document.getElementById('wheel-character-feedback').innerHTML = '🧐'; 
-    
-    teamRacers.forEach(team => {
-        document.getElementById(`wheel-answer-input-${team.id}`).value = '';
-        document.getElementById(`wheel-answer-input-${team.id}`).disabled = false;
-        document.querySelector(`#wheel-col-${team.id} button`).disabled = false;
-        document.getElementById(`wheel-col-${team.id}`).style.backgroundColor = '#ffe0b2';
-    });
-    isQuestionActive = true;
-    document.getElementById(`wheel-answer-input-${teamRacers[0].id}`).focus();
-}
-
-function checkWheelAnswer(teamId) {
-    if (!isQuestionActive || !wheelQuestion) return; 
-
-    const inputElement = document.getElementById(`wheel-answer-input-${teamId}`);
-    const answerColElement = document.getElementById(`wheel-col-${teamId}`);
-    const team = teamRacers.find(t => t.id === teamId);
-
-    const userAnswer = parseInt(inputElement.value);
-    const correctAnswer = wheelQuestion.answer;
-    
-    if (isNaN(userAnswer)) {
-        answerColElement.style.animation = 'shake 0.3s';
-        setTimeout(() => answerColElement.style.animation = 'none', 300);
-        return;
-    }
-    
-    // Blokir semua input setelah jawaban pertama dikirim
-    teamRacers.forEach(t => {
-        document.getElementById(`wheel-answer-input-${t.id}`).disabled = true;
-        document.querySelector(`#wheel-col-${t.id} button`).disabled = true;
-    });
-
-    if (userAnswer === correctAnswer) {
-        // JAWABAN BENAR
-        isQuestionActive = false;
-        
-        document.getElementById('wheel-character-feedback').innerHTML = '🏆'; 
-        answerColElement.style.backgroundColor = '#b9f6ca'; 
-        
-        teamScores[teamId] += wheelQuestion.points;
-        updateWheelScoreboard();
-        
-        alert(`🎉 TIM ${team.name} BENAR! Mendapat +${wheelQuestion.points} poin!`);
-        
-        // Cek Pemenang (misalnya yang mencapai 20 poin duluan)
-        if (teamScores[teamId] >= 20) {
-            setTimeout(() => showEndGamePopUp(team), 500);
-            return;
-        }
-
-        setTimeout(resetWheelQuestion, 2000);
-        
-    } else {
-        // JAWABAN SALAH: BUKA KEMBALI KESEMPATAN UNTUK SEMUA TIM
-        answerColElement.style.backgroundColor = '#ffcdd2'; 
-        document.getElementById('wheel-character-feedback').innerHTML = '😭'; 
-        alert(`❌ TIM ${team.name} SALAH! Coba lagi!`);
-        
-        inputElement.value = '';
-        
-        teamRacers.forEach(t => {
-            const currentTeamCol = document.getElementById(`wheel-col-${t.id}`);
-            if (t.id !== teamId) {
-                document.getElementById(`wheel-answer-input-${t.id}`).disabled = false;
-                document.querySelector(`#wheel-col-${t.id} button`).disabled = false;
-            } else {
-                currentTeamCol.style.backgroundColor = '#f1f1f1';
-            }
-        });
-    }
-}
-
-function resetWheelQuestion() {
-    isQuestionActive = false;
-    wheelQuestion = null;
-    document.getElementById('wheel-question-box').style.display = 'none';
-    document.getElementById('wheel-turn-indicator').textContent = 'Tekan Putar Roda!';
-    document.getElementById('wheel-character-feedback').innerHTML = '👇'; 
-}
-
-// ====================================================================
-// LOGIKA GAME 3: MEMORY CARD (PERBAIKAN LOGIKA)
+// LOGIKA GAME 3: MEMORY CARD
 // ====================================================================
 
 function renderMemoryCardGame() {
@@ -800,8 +630,8 @@ function initializeMemoryCardGame() {
     const questions = generateUniqueQuestions(MEMORY_PAIR_COUNT, 25, 12);
     let cards = [];
     questions.forEach((q, index) => {
-        cards.push({ value: q[0], pairId: index }); // Soal
-        cards.push({ value: String(q[1]), pairId: index }); // Jawaban (dibuat string agar berbeda tipe dengan soal)
+        cards.push({ value: q[0], pairId: index }); // Soal (String)
+        cards.push({ value: String(q[1]), pairId: index }); // Jawaban (String)
     });
     
     shuffledCards = cards.sort(() => 0.5 - Math.random());
@@ -823,7 +653,7 @@ function initializeMemoryCardGame() {
     lockBoard = false;
     matchedPairsCount = 0;
     activeTeamIndex = 0;
-    Object.keys(teamScores).forEach(key => teamScores[key] = 0); 
+    teamScores = teamRacers.reduce((acc, team) => ({ ...acc, [team.id]: 0 }), {}); 
     updateTurnIndicator();
 }
 
@@ -913,17 +743,219 @@ function showMemoryWinnerPopUp() {
     });
     
     const winnerTeam = teamRacers.find(t => t.id === winnerId);
-    
-    const popup = document.getElementById('winner-popup');
-    const title = document.getElementById('winner-title');
-    const message = document.getElementById('winner-message');
-    
-    document.getElementById('game-area').style.display = 'none';
+    showEndGamePopUp(winnerTeam, maxScore);
+}
 
-    title.textContent = `JUARA MEMORI: TIM ${winnerTeam.name}!`;
-    message.textContent = `${winnerTeam.char} Memenangkan ${maxScore} Pasang! Kalian HEBAT!`;
+// ====================================================================
+// LOGIKA GAME 4: WHEEL OF MATH
+// ====================================================================
+
+function renderWheelOfMathGame() {
+    const totalSegments = currentGameData.wheelSegments.length;
     
-    popup.style.display = 'flex';
+    let segmentsHTML = currentGameData.wheelSegments.map((seg, index) => {
+        const angle = 360 / totalSegments;
+        const skew = 90 - angle;
+        const color = seg.color;
+        const rotate = index * angle;
+        
+        return `
+            <li style="--color: ${color}; transform: rotate(${rotate}deg) skewY(${skew}deg);">
+                <span style="color: white; transform: skewY(-${skew}deg) rotate(${angle / 2}deg);">
+                    ${seg.label}
+                </span>
+            </li>
+        `;
+    }).join('');
+
+    return `
+        <div class="wheel-container">
+             <div class="score-and-turn-indicator">
+                <div id="wheel-turn-indicator" class="turn-indicator">Target Skor: ${wheelTargetScore}</div>
+                <div id="wheel-score-board" class="score-board">
+                    ${teamRacers.map(t => `<div id="wheel-score-${t.id}" class="team-score-card team-${t.id}">${t.char} <span class="score-value">0</span></div>`).join('')}
+                </div>
+            </div>
+            
+            <div class="wheel-wrapper">
+                <div class="wheel-pin"></div>
+                <ul class="wheel" id="wheel">
+                    ${segmentsHTML}
+                </ul>
+                <button class="spin-button" id="spin-button" onclick="spinWheel()">PUTAR RODA!</button>
+            </div>
+            
+            <div class="question-box wheel-question-box" id="wheel-question-box" style="display:none;">
+                <div class="character-feedback-container">
+                    <span id="wheel-character-feedback" class="character-feedback-emoji"></span>
+                    <h3 id="wheel-current-question" style="color:#D50000;"></h3>
+                </div>
+                <div class="group-answer-section wheel-rebutan-answer-section">
+                    ${teamRacers.map(t => `
+                        <div class="answer-col" id="wheel-col-${t.id}">
+                            <h4>Tim ${t.name}</h4>
+                            <input type="number" id="wheel-answer-input-${t.id}" placeholder="Jawab!" onkeydown="if(event.key === 'Enter') checkWheelAnswer('${t.id}');" disabled>
+                            <button class="team-submit" onclick="checkWheelAnswer('${t.id}')" disabled>Kirim!</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateWheelScoreboard() {
+    teamRacers.forEach(team => {
+        document.querySelector(`#wheel-score-${team.id} .score-value`).textContent = teamScores[team.id];
+    });
+}
+
+function spinWheel() {
+    if (wheelIsSpinning) return;
+    wheelIsSpinning = true;
+    document.getElementById('spin-button').disabled = true;
+    document.getElementById('wheel-question-box').style.display = 'none'; 
+
+    const wheel = document.getElementById('wheel');
+    const totalSegments = currentGameData.wheelSegments.length;
+    const segmentAngle = 360 / totalSegments;
+    
+    const winningSegmentIndex = Math.floor(Math.random() * totalSegments);
+    const winningSegment = currentGameData.wheelSegments[winningSegmentIndex];
+    
+    const extraTurns = 5; 
+    const targetRotation = (extraTurns * 360) + (360 - (winningSegmentIndex * segmentAngle) - (segmentAngle / 2));
+    
+    wheel.style.transition = 'transform 6s cubic-bezier(0.1, 0.8, 0.4, 1)'; 
+    wheel.style.transform = `rotate(${targetRotation}deg)`;
+    
+    document.getElementById('wheel-turn-indicator').textContent = 'Roda Berputar!';
+    document.getElementById('wheel-character-feedback').innerHTML = '🤞'; 
+
+    setTimeout(() => {
+        wheel.style.transition = 'none'; 
+        wheel.style.transform = `rotate(${targetRotation % 360}deg)`; 
+        handleWheelResult(winningSegment);
+    }, 6000); // Tunggu 6 detik untuk animasi 6s
+}
+
+function handleWheelResult(segment) {
+    wheelIsSpinning = false;
+    document.getElementById('spin-button').disabled = false;
+    document.getElementById('wheel-turn-indicator').textContent = segment.label.toUpperCase() + "!";
+    
+    document.getElementById('wheel-character-feedback').innerHTML = '🥳'; 
+    
+    if (segment.difficulty === 'BONUS') {
+        const bonusPoints = 2; // Nilai bonus tetap 2
+        alert(`🎉 BONUS POIN! Semua tim mendapat +${bonusPoints} poin!`); 
+        teamRacers.forEach(team => {
+            teamScores[team.id] += bonusPoints;
+        });
+        updateWheelScoreboard();
+        setTimeout(resetWheelQuestion, 2000);
+
+    } else {
+        displayWheelQuestion(segment);
+    }
+}
+
+function displayWheelQuestion(segment) {
+    let maxResult = 20; 
+    if (segment.difficulty === 'HARD') maxResult = 40;
+    
+    const [questionText, answer] = generateUniqueQuestions(1, maxResult, 20)[0]; 
+    wheelQuestion = { question: questionText, answer: answer, points: segment.value };
+    
+    const questionBox = document.getElementById('wheel-question-box');
+    questionBox.style.display = 'block';
+    
+    document.getElementById('wheel-current-question').textContent = `[${segment.label}] Berapakah ${questionText}? (Nilai: ${wheelQuestion.points} pts)`;
+    document.getElementById('wheel-turn-indicator').textContent = 'REBUT JAWABANNYA!';
+    document.getElementById('wheel-character-feedback').innerHTML = '🧐'; 
+    
+    teamRacers.forEach(team => {
+        const colElement = document.getElementById(`wheel-col-${team.id}`);
+        document.getElementById(`wheel-answer-input-${team.id}`).value = '';
+        document.getElementById(`wheel-answer-input-${team.id}`).disabled = false;
+        document.querySelector(`#wheel-col-${team.id} button`).disabled = false;
+        colElement.style.backgroundColor = '#ffe0b2';
+        colElement.classList.remove('correct', 'wrong'); // Reset classes
+    });
+    isQuestionActive = true;
+    if (teamRacers.length > 0) {
+        document.getElementById(`wheel-answer-input-${teamRacers[0].id}`).focus();
+    }
+}
+
+function checkWheelAnswer(teamId) {
+    if (!isQuestionActive || !wheelQuestion) return; 
+
+    const inputElement = document.getElementById(`wheel-answer-input-${teamId}`);
+    const answerColElement = document.getElementById(`wheel-col-${teamId}`);
+    const team = teamRacers.find(t => t.id === teamId);
+
+    const userAnswer = parseInt(inputElement.value);
+    const correctAnswer = wheelQuestion.answer;
+    
+    if (isNaN(userAnswer)) {
+        answerColElement.classList.add('wrong');
+        setTimeout(() => answerColElement.classList.remove('wrong'), 300);
+        return;
+    }
+    
+    // Blokir semua input setelah jawaban pertama dikirim
+    teamRacers.forEach(t => {
+        document.getElementById(`wheel-answer-input-${t.id}`).disabled = true;
+        document.querySelector(`#wheel-col-${t.id} button`).disabled = true;
+    });
+
+    if (userAnswer === correctAnswer) {
+        // JAWABAN BENAR
+        isQuestionActive = false;
+        
+        document.getElementById('wheel-character-feedback').innerHTML = '🏆'; 
+        answerColElement.classList.add('correct'); 
+        
+        teamScores[teamId] += wheelQuestion.points;
+        updateWheelScoreboard();
+        
+        alert(`🎉 TIM ${team.name} BENAR! Mendapat +${wheelQuestion.points} poin!`);
+        
+        // Cek Pemenang (menggunakan target score dari settings)
+        if (teamScores[teamId] >= wheelTargetScore) { 
+            setTimeout(() => showEndGamePopUp(team), 500);
+            return;
+        }
+
+        setTimeout(resetWheelQuestion, 2000);
+        
+    } else {
+        // JAWABAN SALAH: BUKA KEMBALI KESEMPATAN UNTUK SEMUA TIM
+        answerColElement.classList.add('wrong'); 
+        document.getElementById('wheel-character-feedback').innerHTML = '😭'; 
+        alert(`❌ TIM ${team.name} SALAH! Coba lagi!`);
+        
+        inputElement.value = '';
+        
+        teamRacers.forEach(t => {
+            const currentTeamCol = document.getElementById(`wheel-col-${t.id}`);
+            if (t.id !== teamId) {
+                document.getElementById(`wheel-answer-input-${t.id}`).disabled = false;
+                document.querySelector(`#wheel-col-${t.id} button`).disabled = false;
+            } else {
+                currentTeamCol.style.backgroundColor = '#f1f1f1';
+            }
+        });
+    }
+}
+
+function resetWheelQuestion() {
+    isQuestionActive = false;
+    wheelQuestion = null;
+    document.getElementById('wheel-question-box').style.display = 'none';
+    document.getElementById('wheel-turn-indicator').textContent = `Target Skor: ${wheelTargetScore}`;
+    document.getElementById('wheel-character-feedback').innerHTML = '👇'; 
 }
 
 
@@ -931,7 +963,7 @@ function showMemoryWinnerPopUp() {
 // LOGIKA POP-UP KEMENANGAN & INISIALISASI
 // ====================================================================
 
-function showEndGamePopUp(winnerTeam) {
+function showEndGamePopUp(winnerTeam, maxScore = null) {
     const popup = document.getElementById('winner-popup');
     const title = document.getElementById('winner-title');
     const message = document.getElementById('winner-message');
@@ -939,11 +971,26 @@ function showEndGamePopUp(winnerTeam) {
     document.getElementById('game-area').style.display = 'none';
 
     if (winnerTeam) {
+        let gameType = currentGameData ? currentGameData.type : 'Game';
+        let messageText = '';
+
+        if (gameType === 'MathRace') {
+            messageText = `Karakter ${winnerTeam.char} mencapai garis finish. Kalian adalah Math Hero!`;
+        } else if (gameType === 'MysteryBox') {
+            messageText = `${winnerTeam.char} Memenangkan ${maxScore} Kotak Misteri! Kalian HEBAT!`;
+        } else if (gameType === 'MemoryCard') {
+            messageText = `${winnerTeam.char} Memenangkan ${maxScore} Pasang! Kalian HEBAT!`;
+        } else if (gameType === 'WheelOfMath') {
+            messageText = `Tim ${winnerTeam.name} mencapai target ${wheelTargetScore} poin. Kalian adalah Math Hero!`;
+        }
+        
         title.textContent = `SELAMAT, TIM ${winnerTeam.name}!`;
-        message.textContent = `Karakter ${winnerTeam.char} mencapai garis finish. Kalian adalah Math Hero!`;
+        message.textContent = messageText;
+        
     } else {
-        title.textContent = `WAKTU HABIS!`;
-        message.textContent = `Cek poin akhir di papan skor!`;
+        // Digunakan jika pertanyaan habis (Math Race)
+        title.textContent = `PERLOMBAAN SELESAI!`;
+        message.textContent = `Semua soal telah terjawab. Cek skor tim terbaik!`;
     }
 
     popup.style.display = 'flex';
@@ -954,4 +1001,7 @@ function closeWinnerPopUp() {
     goBackToSelection();
 }
 
-document.addEventListener('DOMContentLoaded', renderGameCards);
+document.addEventListener('DOMContentLoaded', () => {
+    // Memuat data tim dan game dari Firebase saat aplikasi dimulai
+    loadInitialData(); 
+});

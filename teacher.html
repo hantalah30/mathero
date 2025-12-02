@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Guru | Math Hero Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400,700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="admin-body">
+
+    <div id="login-page" class="login-container">
+        <div class="login-box">
+            <h2>Masuk Guru Math Hero</h2>
+            <p id="login-error" style="display:none;"></p>
+            <div class="form-group">
+                <input type="email" id="login-email" placeholder="Email Guru" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="login-password" placeholder="Password" required>
+            </div>
+            <button onclick="loginAdmin()">MASUK</button>
+            <p style="margin-top: 15px;">Akses Admin: guru@mathero.com / 123456</p>
+        </div>
+    </div>
+
+    <div id="dashboard-main" class="admin-container" style="display:none;">
+        <header class="admin-header">
+            <h2 id="welcome-message">Dashboard Guru - Math Hero</h2>
+            <button class="logout-button" onclick="logoutAdmin()">Keluar (Logout)</button>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="active" data-tab="game-management" onclick="showTab('game-management')">🕹️ Kelola Game</button>
+            <button data-tab="question-management" onclick="showTab('question-management')">❓ Kelola Soal</button>
+            <button data-tab="team-management" onclick="showTab('team-management')">👥 Kelola Tim</button>
+        </nav>
+
+        <div id="game-management" class="tab-content">
+            <h3>Pengaturan Game Aktif</h3>
+            <div id="game-list-dashboard" class="game-settings-grid">
+                </div>
+            
+            <h3>Buat Game Baru</h3>
+            <div class="form-group">
+                <label for="new-game-title">Judul Game</label>
+                <input type="text" id="new-game-title" placeholder="Contoh: Balapan Perkalian Dasar" required>
+            </div>
+            <div class="form-group">
+                <label for="new-game-type">Tipe Game</label>
+                <select id="new-game-type">
+                    <option value="MathRace">Math Race</option>
+                    <option value="MysteryBox">Mystery Box</option>
+                    <option value="MemoryCard">Memory Card</option>
+                    <option value="WheelOfMath">Wheel of Math</option>
+                </select>
+            </div>
+            <div id="game-type-settings-container">
+                </div>
+            <button class="action-button" onclick="saveNewGame()">Simpan Game Baru</button>
+        </div>
+
+        <div id="question-management" class="tab-content" style="display:none;">
+            <h3>Daftar Soal</h3>
+            <button class="action-button" onclick="showQuestionForm()">+ Tambah Soal Baru</button>
+            <div id="question-form-container" style="display:none; margin-top: 15px;">
+                <h4>Form Soal</h4>
+                <input type="hidden" id="question-doc-id">
+                <div class="form-group">
+                    <label for="question-text">Soal (Contoh: 5 + 3)</label>
+                    <input type="text" id="question-text" required>
+                </div>
+                <div class="form-group">
+                    <label for="question-answer">Jawaban</label>
+                    <input type="number" id="question-answer" required>
+                </div>
+                <div class="form-group">
+                    <label for="question-difficulty">Tingkat Kesulitan</label>
+                    <select id="question-difficulty">
+                        <option value="EASY">Mudah</option>
+                        <option value="MEDIUM">Sedang</option>
+                        <option value="HARD">Sulit</option>
+                    </select>
+                </div>
+                <button class="action-button" onclick="saveQuestion()">Simpan Soal</button>
+                <button class="action-button delete" onclick="hideQuestionForm()">Batal</button>
+            </div>
+            <table class="data-table" id="questions-table">
+                <thead>
+                    <tr>
+                        <th>Soal</th>
+                        <th>Jawaban</th>
+                        <th>Kesulitan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="team-management" class="tab-content" style="display:none;">
+            <h3>Daftar Tim/Pembalap</h3>
+            <div id="team-form-container" style="margin-bottom: 20px;">
+                <h4>Tambah/Edit Tim</h4>
+                <input type="hidden" id="team-doc-id">
+                <div class="form-group">
+                    <label for="team-name">Nama Tim</label>
+                    <input type="text" id="team-name" placeholder="Contoh: Singa" required>
+                </div>
+                <div class="form-group">
+                    <label for="team-char">Karakter/Emoji (Contoh: 🦁)</label>
+                    <input type="text" id="team-char" placeholder="Emoji" maxlength="2" required>
+                </div>
+                <button class="action-button" onclick="saveTeam()">Simpan Tim</button>
+                <button class="action-button delete" onclick="clearTeamForm()">Batal/Tambah Baru</button>
+            </div>
+            <table class="data-table" id="teams-table">
+                <thead>
+                    <tr>
+                        <th>Karakter</th>
+                        <th>Nama Tim</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="teacher-script.js"></script>
+</body>
+</html>
